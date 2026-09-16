@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FraudLens — Procurement Fraud Detection Analyst</title>
+<meta name="description" content="Review procurement transactions for indicators of fraud, collusion, error and policy circumvention. Flags, evidence and ranks — never accuses.">
+<style>
+  :root {
+    --bg: #0a0e17;
+    --card: rgba(255,255,255,0.045);
+    --card-strong: rgba(255,255,255,0.07);
+    --border: rgba(255,255,255,0.09);
+    --text: #e8ecf4;
+    --muted: #94a3b8;
+    --teal: #2dd4bf;
+    --indigo: #818cf8;
+    --low: #34d399;
+    --medium: #fbbf24;
+    --high: #fb923c;
+    --critical: #f87171;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    line-height: 1.5;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: -50%;
+    background:
+      radial-gradient(60vmax 60vmax at 12% 18%, rgba(45,212,191,0.10), transparent 55%),
+      radial-gradient(50vmax 50vmax at 88% 82%, rgba(129,140,248,0.10), transparent 55%);
+    animation: drift 26s ease-in-out infinite alternate;
+    pointer-events: none;
+    z-index: 0;
+  }
+  @keyframes drift { to { transform: translate(4%, -3%) scale(1.06); } }
+
+  .wrap { position: relative; z-index: 1; max-width: 1280px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  header { text-align: center; margin-bottom: 36px; }
+  .logo {
+    width: 64px; height: 64px; margin: 0 auto 16px; border-radius: 18px;
+    background: linear-gradient(135deg, var(--teal), var(--indigo));
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 40px rgba(45,212,191,0.35);
+  }
+  .logo svg { width: 34px; height: 34px; }
+  h1 {
+    font-size: clamp(28px, 4.5vw, 44px); font-weight: 700; letter-spacing: -0.02em;
+    background: linear-gradient(90deg, #fff, #c7d2fe);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  h1 span { background: linear-gradient(90deg, var(--teal), var(--indigo)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  .tagline { color: var(--muted); max-width: 640px; margin: 10px auto 0; font-size: 15px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 18px; }
+  .chip {
+    font-size: 12px; padding: 5px 12px; border-radius: 999px;
+    background: var(--card); border: 1px solid var(--border); color: var(--muted);
+  }
+
+  .grid { display: grid; grid-template-columns: minmax(340px, 460px) 1fr; gap: 20px; align-items: start; }
+  @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 18px;
+    backdrop-filter: blur(14px); box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+  }
+  .card.pad { padding: 22px; }
+  .card h2 { font-size: 15px; font-weight: 600; letter-spacing: 0.02em; color: #cbd5e1; display: flex; align-items: center; gap: 8px; }
+  .card h2 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 12px var(--teal); }
+
+  .input-pane textarea {
+    width: 100%; height: 340px; margin-top: 14px; resize: vertical;
+    background: rgba(2,6,17,0.6); border: 1px solid var(--border); border-radius: 12px;
+    color: #cdd6e4; font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
+    font-size: 12px; padding: 14px; outline: none; transition: border-color .2s, box-shadow .2s;
+  }
+  .input-pane textarea:focus { border-color: rgba(45,212,191,0.5); box-shadow: 0 0 0 3px rgba(45,212,191,0.12); }
+
+  .btn-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+  button {
+    font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer;
+    padding: 10px 18px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--card-strong); color: var(--text); transition: all .18s;
+  }
+  button:hover { transform: translateY(-1px); border-color: rgba(255,255,255,0.2); }
+  button.primary {
+    background: linear-gradient(135deg, var(--teal), var(--indigo)); border: none; color: #06121a;
+    box-shadow: 0 6px 24px rgba(45,212,191,0.35);
+  }
+  button.ghost { background: transparent; color: var(--muted); }
+  .error {
+    display: none; margin-top: 12px; padding: 12px 14px; border-radius: 10px; font-size: 13px;
+    background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.35); color: #fca5a5;
+  }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+  .tile { background: var(--card-strong); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
+  .tile .k { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+  .tile .v { font-size: 26px; font-weight: 700; margin-top: 4px; }
+
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 14px; }
+  .filters button { font-size: 12.5px; padding: 6px 14px; border-radius: 999px; }
+  .filters button.active { background: linear-gradient(135deg, var(--teal), var(--indigo)); color: #06121a; border: none; }
+
+  .findings { display: flex; flex-direction: column; gap: 12px; }
+  .finding { background: var(--card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; transition: border-color .2s; }
+  .finding:hover { border-color: rgba(255,255,255,0.18); }
+  .finding.collapsed .body { display: none; }
+  .f-head { padding: 16px 18px; cursor: pointer; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .f-head .arrow { margin-left: auto; color: var(--muted); transition: transform .2s; font-size: 12px; }
+  .finding:not(.collapsed) .f-head .arrow { transform: rotate(180deg); }
+  .band-badge {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.06em; padding: 4px 10px; border-radius: 999px; flex-shrink: 0;
+  }
+  .band-LOW { background: rgba(52,211,153,0.14); color: var(--low); border: 1px solid rgba(52,211,153,0.4); }
+  .band-MEDIUM { background: rgba(251,191,36,0.14); color: var(--medium); border: 1px solid rgba(251,191,36,0.4); }
+  .band-HIGH { background: rgba(251,146,60,0.16); color: var(--high); border: 1px solid rgba(251,146,60,0.45); }
+  .band-CRITICAL { background: rgba(248,113,113,0.16); color: var(--critical); border: 1px solid rgba(248,113,113,0.5); }
+  .typ { font-weight: 700; font-size: 14px; }
+  .f-meta { color: var(--muted); font-size: 12.5px; }
+  .score-wrap { display: flex; align-items: center; gap: 8px; }
+  .score-bar { width: 90px; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden; }
+  .score-fill { height: 100%; border-radius: 3px; }
+  .f-body { padding: 0 18px 18px; border-top: 1px solid var(--border); margin-top: 0; padding-top: 16px; }
+  .f-body h4 { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 14px 0 8px; }
+  .f-body h4:first-child { margin-top: 0; }
+  table.evidence { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.evidence th { text-align: left; color: var(--muted); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+  table.evidence td { padding: 7px 8px; border-bottom: 1px solid rgba(255,255,255,0.05); vertical-align: top; }
+  ul.benign { list-style: none; font-size: 13px; color: #b6c2d4; }
+  ul.benign li { padding: 3px 0 3px 20px; position: relative; }
+  ul.benign li::before { content: "✓"; position: absolute; left: 0; color: var(--low); }
+  .action-pill { display: inline-block; font-size: 12.5px; font-weight: 600; padding: 6px 12px; border-radius: 8px; background: rgba(45,212,191,0.12); border: 1px solid rgba(45,212,191,0.35); color: var(--teal); }
+  .control-note { font-size: 13px; color: var(--muted); }
+
+  .gaps ul { list-style: none; margin-top: 10px; font-size: 13.5px; color: #b6c2d4; }
+  .gaps li { padding: 6px 0 6px 22px; position: relative; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .gaps li::before { content: "○"; position: absolute; left: 2px; color: var(--indigo); }
+
+  .empty { text-align: center; color: var(--muted); padding: 40px 20px; font-size: 14.5px; }
+  .section-gap { height: 20px; }
+  footer { text-align: center; color: var(--muted); font-size: 12.5px; margin-top: 48px; }
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: #13202c; border: 1px solid rgba(45,212,191,0.4); color: var(--teal);
+    padding: 10px 20px; border-radius: 10px; font-size: 13.5px; font-weight: 600;
+    transition: transform .3s ease; z-index: 10;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .muted { color: var(--muted); }
+  .mono { font-family: "Cascadia Code", Consolas, monospace; font-size: 0.92em; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#06121a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3 L21 7 L21 11 C21 16.5 17.4 20.2 12 21.5 C6.6 20.2 3 16.5 3 11 L3 7 Z"/><path d="M12 8 v5"/><circle cx="12" cy="16.4" r="0.4" fill="#06121a"/>
+      </svg>
+    </div>
+    <h1>Fraud<span>Lens</span></h1>
+    <p class="tagline">Procurement fraud detection analyst. Reviews transactional records across 11 typologies — duplicate payments, threshold splitting, phantom suppliers, collusion and more — then flags, evidences and ranks. It never accuses.</p>
+    <div class="chips">
+      <span class="chip">11 detection typologies</span>
+      <span class="chip">Weighted scoring · corroboration escalation</span>
+      <span class="chip">Benford's law analytics</span>
+      <span class="chip">POPIA-mindful, evidence-first</span>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- INPUT -->
+    <div class="card pad input-pane">
+      <h2><span class="dot"></span> Transactional records (JSON)</h2>
+      <textarea id="input" spellcheck="false" placeholder="Paste purchase_orders, invoices, goods_receipts, suppliers, employees and policy here…"></textarea>
+      <div class="btn-row">
+        <button class="primary" id="analyzeBtn">Analyze records</button>
+        <button id="demoBtn">Load demo dataset</button>
+        <button id="uploadBtn">Upload .json</button>
+        <button class="ghost" id="clearBtn">Clear</button>
+        <input type="file" id="fileInput" accept=".json,application/json" hidden>
+      </div>
+      <div class="error" id="error"></div>
+    </div>
+
+    <!-- RESULTS -->
+    <div>
+      <div class="card pad" id="summaryCard" style="display:none">
+        <h2><span class="dot"></span> Run summary</h2>
+        <div class="section-gap"></div>
+        <div class="tiles" id="tiles"></div>
+        <div class="btn-row">
+          <button id="copyBtn">Copy JSON output</button>
+          <button id="downloadBtn">Download JSON output</button>
+        </div>
+      </div>
+
+      <div class="section-gap"></div>
+
+      <div class="card pad" id="resultsCard" style="display:none">
+        <h2><span class="dot"></span> Findings</h2>
+        <div class="filters" id="filters"></div>
+        <div class="findings" id="findings"></div>
+        <div class="empty" id="noFindings" style="display:none">No indicators fired — no findings to report.</div>
+      </div>
+
+      <div class="section-gap"></div>
+
+      <div class="card pad gaps" id="gapsCard" style="display:none">
+        <h2><span class="dot" style="background:#818cf8;box-shadow:0 0 12px #818cf8"></span> Data gaps — checks that could not be performed</h2>
+        <ul id="gaps"></ul>
+      </div>
+
+      <div class="card pad empty" id="placeholder">
+        Run an analysis to see findings here.<br><br>
+        <span style="font-size:12.5px">Or click <b>Load demo dataset</b> and hit <b>Analyze records</b> to see all 11 typologies in action.</span>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    FraudLens flags indicators for investigation — it does not accuse. High-risk findings require at least two independent pieces of evidence.
+    Built by Freddy Thosago · All analysis runs locally in your browser.
+  </footer>
+</div>
+<div class="toast" id="toast">Copied</div>
+
+<script src="engine.js"></script>
+<script src="data.js"></script>
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const input = $("input"), errorBox = $("error");
+  let result = null, filter = "ALL";
+
+  const BAND_COLOR = { LOW: "#34d399", MEDIUM: "#fbbf24", HIGH: "#fb923c", CRITICAL: "#f87171" };
+  const ACTION_LABEL = {
+    monitor: "Monitor",
+    request_supporting_documents: "Request supporting documents",
+    hold_payment: "Hold payment",
+    verify_bank_details_by_callback: "Verify bank details by callback",
+    escalate_to_internal_audit: "Escalate to internal audit"
+  };
+  const TYPO_TITLE = {
+    DUPLICATE_PAYMENT: "Duplicate payment",
+    THRESHOLD_SPLITTING: "Threshold splitting",
+    PHANTOM_SUPPLIER: "Phantom / shell supplier indicators",
+    COLLUSION: "Employee–supplier link",
+    BANK_DETAIL_CHANGE: "Banking detail manipulation",
+    SEQUENCE_ANOMALY: "Sequence anomaly",
+    PRICE_MANIPULATION: "Price / quantity manipulation",
+    APPROVAL_ABUSE: "Approval control weakness",
+    SOURCING_CIRCUMVENTION: "Sourcing circumvention",
+    STATISTICAL_ANOMALY: "Statistical anomaly",
+    DORMANCY_REACTIVATION: "Dormancy reactivation",
+    POSSIBLE_PROMPT_INJECTION: "Possible prompt injection in record data"
+  };
+
+  $("demoBtn").onclick = () => { input.value = JSON.stringify(SAMPLE_DATA, null, 2); hideError(); };
+  $("clearBtn").onclick = () => { input.value = ""; result = null; render(); };
+  $("uploadBtn").onclick = () => $("fileInput").click();
+  $("fileInput").onchange = (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => { input.value = r.result; analyze(); };
+    r.readAsText(f);
+  };
+  $("analyzeBtn").onclick = analyze;
+
+  function analyze() {
+    hideError();
+    let data;
+    try { data = JSON.parse(input.value); }
+    catch (e) { showError("Could not parse JSON: " + e.message); return; }
+    if (!data || typeof data !== "object" || Array.isArray(data)) { showError("Expected a JSON object containing purchase_orders, invoices, goods_receipts, suppliers, employees and/or policy."); return; }
+    try { result = FraudLens.analyze(data); }
+    catch (e) { showError("Analysis error: " + e.message); return; }
+    filter = "ALL";
+    render();
+    $("resultsCard").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function showError(m) { errorBox.textContent = m; errorBox.style.display = "block"; }
+  function hideError() { errorBox.style.display = "none"; }
+
+  function esc(s) { const d = document.createElement("div"); d.textContent = String(s); return d.innerHTML; }
+
+  function render() {
+    const has = !!result;
+    $("placeholder").style.display = has ? "none" : "block";
+    $("summaryCard").style.display = has ? "block" : "none";
+    $("resultsCard").style.display = has ? "block" : "none";
+    $("gapsCard").style.display = has ? "block" : "none";
+    if (!has) return;
+
+    const s = result.run_summary;
+    $("tiles").innerHTML = [
+      tile("Records reviewed", s.records_reviewed),
+      tile("Flagged findings", s.flagged_count),
+      `<div class="tile"><div class="k">Highest risk band</div><div class="v" style="color:${BAND_COLOR[s.highest_risk_band] || "var(--muted)"}">${s.highest_risk_band}</div></div>`,
+      tile("Data gaps", s.data_gaps.length)
+    ].join("");
+
+    // filters
+    const bands = ["ALL", "CRITICAL", "HIGH", "MEDIUM", "LOW"];
+    const counts = {};
+    result.findings.forEach(f => counts[f.risk_band] = (counts[f.risk_band] || 0) + 1);
+    $("filters").innerHTML = bands.map(b =>
+      `<button data-band="${b}" class="${filter === b ? "active" : ""}">${b === "ALL" ? "All" : b} ${b === "ALL" ? "(" + result.findings.length + ")" : "(" + (counts[b] || 0) + ")"}</button>`
+    ).join("");
+    $("filters").querySelectorAll("button").forEach(b => b.onclick = () => { filter = b.dataset.band; render(); });
+
+    // findings
+    const shown = result.findings.filter(f => filter === "ALL" || f.risk_band === filter);
+    $("noFindings").style.display = shown.length ? "none" : "block";
+    $("findings").innerHTML = shown.map((f, i) => {
+      const c = BAND_COLOR[f.risk_band];
+      return `
+      <div class="finding collapsed" data-i="${i}">
+        <div class="f-head">
+          <span class="band-badge band-${f.risk_band}">${f.risk_band}</span>
+          <span class="typ">${TYPO_TITLE[f.typology] || f.typology}</span>
+          <span class="f-meta mono">${f.entity_type}: ${esc(f.entity_ids.join(", "))}</span>
+          <div class="score-wrap">
+            <div class="score-bar"><div class="score-fill" style="width:${f.risk_score}%;background:${c}"></div></div>
+            <span class="f-meta" style="font-weight:700;color:${c}">${f.risk_score}</span>
+          </div>
+          <span class="arrow">▾</span>
+        </div>
+        <div class="f-body">
+          <h4>Evidence</h4>
+          <table class="evidence">
+            <tr><th style="width:22%">Field</th><th style="width:39%">Observed</th><th>Expected / baseline</th></tr>
+            ${f.evidence.map(e => `<tr><td class="mono">${esc(e.field)}</td><td>${esc(e.observed)}</td><td class="muted">${esc(e.expected_or_baseline)}</td></tr>`).join("")}
+          </table>
+          <h4>Benign explanations considered</h4>
+          <ul class="benign">${f.benign_explanations.map(b => `<li>${esc(b)}</li>`).join("")}</ul>
+          <h4>Recommended action</h4>
+          <span class="action-pill">${ACTION_LABEL[f.recommended_action] || esc(f.recommended_action)}</span>
+          <span class="f-meta"> · confidence: ${f.confidence}</span>
+          <h4>Suggested control</h4>
+          <div class="control-note">${esc(f.suggested_control)}</div>
+        </div>
+      </div>`;
+    }).join("");
+    $("findings").querySelectorAll(".f-head").forEach(h =>
+      h.onclick = () => h.parentElement.classList.toggle("collapsed"));
+
+    $("gaps").innerHTML = s.data_gaps.map(g => `<li>${esc(g)}</li>`).join("") || "<li>None — all checks could be performed against the supplied data.</li>";
+  }
+
+  function tile(k, v) { return `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div></div>`; }
+
+  function toast(msg) {
+    const t = $("toast"); t.textContent = msg; t.classList.add("show");
+    setTimeout(() => t.classList.remove("show"), 1800);
+  }
+  $("copyBtn").onclick = () => {
+    if (!result) return;
+    navigator.clipboard.writeText(JSON.stringify(result, null, 2)).then(() => toast("JSON output copied")).catch(() => toast("Copy failed — use Download instead"));
+  };
+  $("downloadBtn").onclick = () => {
+    if (!result) return;
+    const blob = new Blob([JSON.stringify(result, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "fraudlens-findings.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast("Downloaded");
+  };
+
+  // preload demo data on first load
+  input.value = JSON.stringify(SAMPLE_DATA, null, 2);
+})();
+</script>
+</body>
+</html>
